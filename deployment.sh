@@ -1,6 +1,24 @@
+print_usage() {
+    echo "usage: $(basename """$0""") [host] [port] [command...]"
+}
+
+if [ "$#" -le 2 ]; then
+    echo "Incorrect number of arguments"
+    print_usage
+    exit 1
+fi
+
 host=$1
 port=$2
 shift 2
+
+case $port in
+    ''|*[!0-9]*)
+        echo "Invalid port '$port'"
+        print_usage
+        exit 1
+        ;;
+esac
 
 retries=60
 
