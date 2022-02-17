@@ -6,4 +6,4 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v2
-      - run: chmod +x send_deploy_command.sh && ./send_deploy_command.sh deploy-ops 7200 deploy testing
+      - run: chmod +x send_deploy_command.sh && ./send_deploy_command.sh deploy-ops 7200 test
