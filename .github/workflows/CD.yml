@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - run: echo "Test"
+      - run: echo "Starting deployment"
+      - run: echo 'deploy test' | nc localhost 7200 | while IFS= read -r x && [ "$x" != "EOF" ]; do echo "$x" ; done
+      - run: echo "Deployment done"
