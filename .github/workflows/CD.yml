@@ -5,4 +5,4 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - run: chmod +x send_deploy_command.sh && ./send_deploy_command.sh deploy-ops 7200 deploy testing
+      - run: chmod +x ./send_deploy_command.sh && ./send_deploy_command.sh deploy-ops 7200 deploy testing
