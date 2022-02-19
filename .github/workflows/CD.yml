@@ -5,7 +5,7 @@ jobs:
   deploy:
     runs-on: self-hosted
     steps:
-      - run: apt-get install xxd
+      - run: apt-get update && apt-get install xxd
       - uses: actions/checkout@v2
       - run: echo "${{ secrets.DEPLOYMENT_PSK }}" > psk.key
       - run: chmod +x deployment.sh && ./deployment.sh deploy-ops 7200 deploy test
