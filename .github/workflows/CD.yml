@@ -12,6 +12,7 @@ on:
         description: Which environment to deploy
 jobs:
   deploy:
+    environment: ${{ github.event.inputs.environment }}
     runs-on: self-hosted
     steps:
       - run: apt-get update && apt-get install xxd
