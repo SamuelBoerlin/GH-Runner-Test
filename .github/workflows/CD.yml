@@ -1,6 +1,15 @@
 name: "CD"
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        required: true
+        options:
+          - testing
+          - staging
+          - production
+        description: Which environment to deploy
 jobs:
   deploy:
     runs-on: self-hosted
@@ -8,4 +17,4 @@ jobs:
       - run: apt-get update && apt-get install xxd
       - uses: actions/checkout@v2
       - run: echo "${{ secrets.DEPLOYMENT_PSK }}" > psk.key
-      - run: chmod +x deployment.sh && ./deployment.sh deploy-ops 7200 deploy test
+      - run: chmod +x deployment.sh && ./deployment.sh deploy-ops 7200 deploy ${{ github.event.inputs.environment }}
