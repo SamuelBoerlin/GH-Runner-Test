@@ -14,14 +14,24 @@ jobs:
   deploy:
     environment: ${{ github.event.inputs.environment }}
     runs-on: self-hosted
+    outputs:
+      status: ${{ steps.deployment.outputs.status }}
     steps:
-      - run: apt-get update && apt-get install xxd
+      - name: Install xxd
+        run: apt-get update && apt-get install xxd
       - uses: actions/checkout@v2
-      - run: echo "${{ secrets.DEPLOYMENT_PSK }}" > psk.key
-      - run: chmod +x deployment.sh && ./deployment.sh deploy-ops 7200 deploy ${{ github.event.inputs.environment }} ${{ secrets.GITHUB_TOKEN }}
+      - name: Create PSK for deployment access
+        run: echo "${{ secrets.DEPLOYMENT_PSK }}" > psk.key
+      - name: Run deployment
+        id: deployment
+        run: |
+          chmod +x deployment.sh
+          ./deployment.sh deploy-ops 7200 deploy ${{ github.event.inputs.environment }} ${{ secrets.GITHUB_TOKEN }}
+          echo "##[set-output name=status;]$?"
 
   badges:
     needs: deploy
+    if: ${{ always() }}
     runs-on: self-hosted
     steps:
       # Get environment name for badge
@@ -31,8 +41,8 @@ jobs:
           [ "${{ github.event.inputs.environment }}" = "testing" ] && echo "##[set-output name=label;]Testing"
           [ "${{ github.event.inputs.environment }}" = "staging" ] && echo "##[set-output name=label;]Staging"
           [ "${{ github.event.inputs.environment }}" = "production" ] && echo "##[set-output name=label;]Production"
-          echo "##[set-output name=status;]OK"
-          echo "##[set-output name=color;]green"
+          if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=status;]OK"; else echo "##[set-output name=status;]Failure"; fi
+          if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=color;]green"; else echo "##[set-output name=color;]red"; fi
 
       # Everything below here is part of the badge action, slightly modified from
       # the example in https://github.com/emibcn/badge-action
