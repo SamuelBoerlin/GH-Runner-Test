@@ -18,4 +18,4 @@ jobs:
       - run: apt-get update && apt-get install xxd
       - uses: actions/checkout@v2
       - run: echo "${{ secrets.DEPLOYMENT_PSK }}" > psk.key
-      - run: chmod +x deployment.sh && ./deployment.sh deploy-ops 7200 deploy ${{ github.event.inputs.environment }}
+      - run: chmod +x deployment.sh && ./deployment.sh deploy-ops 7200 deploy ${{ github.event.inputs.environment }} ${{ secrets.GITHUB_TOKEN }}
