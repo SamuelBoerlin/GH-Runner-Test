@@ -9,7 +9,7 @@ on:
           - testing
           - staging
           - production
-        description: Which environment to deploy
+        description: Environment to deploy
 jobs:
   deploy:
     environment: ${{ github.event.inputs.environment }}
@@ -24,6 +24,18 @@ jobs:
     needs: deploy
     runs-on: self-hosted
     steps:
+      # Get environment name for badge
+      - name: Get deployment status
+        id: deployment_status
+        run: |
+          [ "${{ github.event.inputs.environment }}" = "testing" ] && echo "##[set-output name=label;]Testing"
+          [ "${{ github.event.inputs.environment }}" = "staging" ] && echo "##[set-output name=label;]Staging"
+          [ "${{ github.event.inputs.environment }}" = "production" ] && echo "##[set-output name=label;]Production"
+          echo "##[set-output name=status;]OK"
+          echo "##[set-output name=color;]green"
+
+      # Everything below here is part of the badge action, slightly modified from
+      # the example in https://github.com/emibcn/badge-action
       # Get current banch name to use it as dest directory
       - name: Extract branch name
         shell: bash
@@ -33,14 +45,10 @@ jobs:
       - name: Prepare environment
         id: coverage
         run: |
-          # Generates a GitHub Workflow output named `lines` with a coverage value
-          echo "##[set-output name=lines;]${COVERAGE}"
-          # Output values to be used by other steps
           echo "##[set-output name=path;]${BADGE_PATH}"
           echo "##[set-output name=branch;]${BRANCH}"
         env:
-          COVERAGE: 53.5%
-          BADGE_PATH: ${{ steps.extract_branch.outputs.branch }}/test-badge.svg
+          BADGE_PATH: ${{ steps.extract_branch.outputs.branch }}/${{ github.event.inputs.environment }}.svg
           BRANCH: badges
 
       - uses: actions/checkout@v1
@@ -58,9 +66,9 @@ jobs:
         uses: emibcn/badge-action@v1
         id: badge
         with:
-          label: 'Test coverage'
-          status: ${{ steps.coverage.outputs.lines }}
-          color: 'blue,555,daf'
+          label: ${{ steps.deployment_status.outputs.label }}
+          status: ${{ steps.deployment_status.outputs.status }}
+          color: ${{ steps.deployment_status.outputs.color }}
           path: ${{ steps.coverage.outputs.path }}
 
       - name: Upload badge as artifact
