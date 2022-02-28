@@ -19,3 +19,69 @@ jobs:
       - uses: actions/checkout@v2
       - run: echo "${{ secrets.DEPLOYMENT_PSK }}" > psk.key
       - run: chmod +x deployment.sh && ./deployment.sh deploy-ops 7200 deploy ${{ github.event.inputs.environment }} ${{ secrets.GITHUB_TOKEN }}
+
+  badges:
+    needs: deploy
+    runs-on: self-hosted
+    steps:
+      # Get current banch name to use it as dest directory
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
+      - name: Prepare environment
+        id: coverage
+        run: |
+          # Generates a GitHub Workflow output named `lines` with a coverage value
+          echo "##[set-output name=lines;]${COVERAGE}"
+          # Output values to be used by other steps
+          echo "##[set-output name=path;]${BADGE_PATH}"
+          echo "##[set-output name=branch;]${BRANCH}"
+        env:
+          COVERAGE: 53.5%
+          BADGE_PATH: ${{ steps.extract_branch.outputs.branch }}/test-badge.svg
+          BRANCH: badges
+
+      - uses: actions/checkout@v1
+        with:
+          ref: ${{ steps.coverage.outputs.branch }}
+
+      # Create the directory where badges will be saved, if needed
+      - name: Create destination directory
+        env:
+          BADGE_PATH: ${{ steps.coverage.outputs.path }}
+        run: mkdir -p "${BADGE_PATH%/*}"
+
+      # Use the output from the `coverage` step
+      - name: Generate the badge SVG image
+        uses: emibcn/badge-action@v1
+        id: badge
+        with:
+          label: 'Test coverage'
+          status: ${{ steps.coverage.outputs.lines }}
+          color: 'blue,555,daf'
+          path: ${{ steps.coverage.outputs.path }}
+
+      - name: Upload badge as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: badge
+          path: ${{ steps.coverage.outputs.path }}
+          if-no-files-found: error
+
+      - name: Commit badge
+        continue-on-error: true
+        env:
+          BADGE: ${{ steps.coverage.outputs.path }}
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add "${BADGE}"
+          git commit -m "Add/Update badge"
+      - name: Push badge commit
+        uses: ad-m/github-push-action@v0.6.0
+        if: ${{ success() }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.coverage.outputs.branch }}
