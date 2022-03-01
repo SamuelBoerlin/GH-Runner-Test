@@ -58,8 +58,7 @@ jobs:
           [ "${{ github.event.inputs.environment }}" = "testing" ] && echo "##[set-output name=label;]Testing"
           [ "${{ github.event.inputs.environment }}" = "staging" ] && echo "##[set-output name=label;]Staging"
           [ "${{ github.event.inputs.environment }}" = "production" ] && echo "##[set-output name=label;]Production"
-          echo "##[set-output name=status;]${{ needs.deploy.outputs.release_name }}"
-          #if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=status;]OK"; else echo "##[set-output name=status;]Failure"; fi
+          if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=status;]${{ needs.deploy.outputs.release_name }} | OK"; else echo "##[set-output name=status;]${{ needs.deploy.outputs.release_name }} | Failure"; fi
           if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=color;]green"; else echo "##[set-output name=color;]red"; fi
 
       # Everything below here is part of the badge action, slightly modified from
