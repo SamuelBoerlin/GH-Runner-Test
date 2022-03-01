@@ -1,4 +1,5 @@
 name: "CD"
+
 on:
   workflow_dispatch:
     inputs:
@@ -10,18 +11,34 @@ on:
           - staging
           - production
         description: Environment to deploy
+
 jobs:
   deploy:
     environment: ${{ github.event.inputs.environment }}
     runs-on: self-hosted
     outputs:
       status: ${{ steps.deployment.outputs.status }}
+      release_name: ${{ steps.get_release_name.outputs.name }}
     steps:
+      # xxd is required by deployment.sh to convert the PSK to hex
       - name: Install xxd
         run: apt-get update && apt-get install xxd
+
       - uses: actions/checkout@v2
+
       - name: Create PSK for deployment access
         run: echo "${{ secrets.DEPLOYMENT_PSK }}" > psk.key
+
+      - name: Getting release name
+        id: get_release_name
+        run: |
+          [ "${{ github.event.inputs.environment }}" = "testing" ] && playbook="dsp-test-01.yml"
+          [ "${{ github.event.inputs.environment }}" = "staging" ] && playbook="dasch_stage.yml"
+          [ "${{ github.event.inputs.environment }}" = "production" ] && playbook="dasch_prod.yml"
+          release_name=$(cat "$playbook" | sed -n "s/^.*DSP_RELEASE:.*\"\(.*\)\".*$/\1/p")
+          [ -z "$release_name" ] && { echo "Could not get release name" | tee /dev/fd/3; exit 1; }
+          echo "##[set-output name=name;]$release_name"
+
       - name: Run deployment
         id: deployment
         run: |
@@ -34,18 +51,20 @@ jobs:
     if: ${{ always() }}
     runs-on: self-hosted
     steps:
-      # Get environment name for badge
+      # Get environment name and status for badge
       - name: Get deployment status
         id: deployment_status
         run: |
           [ "${{ github.event.inputs.environment }}" = "testing" ] && echo "##[set-output name=label;]Testing"
           [ "${{ github.event.inputs.environment }}" = "staging" ] && echo "##[set-output name=label;]Staging"
           [ "${{ github.event.inputs.environment }}" = "production" ] && echo "##[set-output name=label;]Production"
-          if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=status;]OK"; else echo "##[set-output name=status;]Failure"; fi
+          echo "##[set-output name=status;]${{ needs.deploy.outputs.release_name }}"
+          #if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=status;]OK"; else echo "##[set-output name=status;]Failure"; fi
           if [ "${{ needs.deploy.outputs.status }}" = "0" ]; then echo "##[set-output name=color;]green"; else echo "##[set-output name=color;]red"; fi
 
       # Everything below here is part of the badge action, slightly modified from
       # the example in https://github.com/emibcn/badge-action
+
       # Get current banch name to use it as dest directory
       - name: Extract branch name
         shell: bash
@@ -61,6 +80,7 @@ jobs:
           BADGE_PATH: ${{ steps.extract_branch.outputs.branch }}/${{ github.event.inputs.environment }}.svg
           BRANCH: badges
 
+      # Checkout branch where the badge SVG will be saved
       - uses: actions/checkout@v1
         with:
           ref: ${{ steps.coverage.outputs.branch }}
@@ -81,13 +101,7 @@ jobs:
           color: ${{ steps.deployment_status.outputs.color }}
           path: ${{ steps.coverage.outputs.path }}
 
-      - name: Upload badge as artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: badge
-          path: ${{ steps.coverage.outputs.path }}
-          if-no-files-found: error
-
+      # Commit and push badge SVG to the repository
       - name: Commit badge
         continue-on-error: true
         env:

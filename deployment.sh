@@ -50,6 +50,8 @@ read_key() {
 shopt -s extglob
 
 connect() {
+    # Connects to the deployment server via openssl. Uses a pre-shared key (PSK), consisting
+    # of an identity and key, for authorization
     identity=$1
     psk=$2
     openssl s_client -tls1_2 -quiet -verify_quiet -psk_identity $identity -psk $psk -connect ${host}:${port} 2>"$errors_file"
@@ -60,15 +62,20 @@ for i in $(seq 1 $retries); do
 
     # Try opening connection, send command and read response
     while IFS= read -r x 2>"$errors_file"; do
+        # Parse response
         case "$x" in
             "${COMMAND_RESPONSE_STATUS:-STATUS}: "@([-]+([0-9])|+([0-9])))
+                # Response is exit code of command (by default STATUS: <exit_code>)
                 status=${x#????????}
+                # If there is no EOF word then consider the command finished
                 [ -z "$COMMAND_RESPONSE_EOF" ] && finished=1
                 ;;
             *)
                 if [ ! -z "$COMMAND_RESPONSE_EOF"] && [ "$x" = "$COMMAND_RESPONSE_EOF" ]; then
+                    # Response is EOF word, command has finished
                     finished=1
                 else
+                    # Output response to stdout
                     if [ "$i" -ne 1 ] && [ "$connected" -ne 1 ]; then
                         echo ""
                     fi
@@ -80,7 +87,7 @@ for i in $(seq 1 $retries); do
         connected=1
 
         if [ "$finished" -ne 0 ]; then break; fi
-    done < <(echo "$@" | connect "$(read_identity)" $(read_key))
+    done < <(echo "$@" | connect "$(read_identity)" $(read_key)) # Pipe command into openssl connection
 
     # Something went wrong, try again
     if [ "$finished" -eq 0 ]; then
