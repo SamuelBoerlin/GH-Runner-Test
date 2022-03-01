@@ -36,7 +36,7 @@ jobs:
           [ "${{ github.event.inputs.environment }}" = "staging" ] && playbook="dasch_stage.yml"
           [ "${{ github.event.inputs.environment }}" = "production" ] && playbook="dasch_prod.yml"
           release_name=$(cat "$playbook" | sed -n "s/^.*DSP_RELEASE:.*\"\(.*\)\".*$/\1/p")
-          [ -z "$release_name" ] && { echo "Could not get release name" | tee /dev/fd/3; exit 1; }
+          [ -z "$release_name" ] && { echo "Could not get release name"; exit 1; }
           echo "##[set-output name=name;]$release_name"
 
       - name: Run deployment

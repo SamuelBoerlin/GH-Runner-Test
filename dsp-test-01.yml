@@ -1,0 +1,7 @@
+---
+- hosts: some_host
+  roles:
+    - role: some_role
+      vars:
+        DSP_RELEASE: "1111.11.11-rc"
+    - role: some_other_role
