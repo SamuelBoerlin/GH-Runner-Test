@@ -71,7 +71,7 @@ jobs:
         id: extract_branch
 
       - name: Prepare environment
-        id: coverage
+        id: environment
         run: |
           echo "##[set-output name=path;]${BADGE_PATH}"
           echo "##[set-output name=branch;]${BRANCH}"
@@ -82,15 +82,15 @@ jobs:
       # Checkout branch where the badge SVG will be saved
       - uses: actions/checkout@v1
         with:
-          ref: ${{ steps.coverage.outputs.branch }}
+          ref: ${{ steps.environment.outputs.branch }}
 
       # Create the directory where badges will be saved, if needed
       - name: Create destination directory
         env:
-          BADGE_PATH: ${{ steps.coverage.outputs.path }}
+          BADGE_PATH: ${{ steps.environment.outputs.path }}
         run: mkdir -p "${BADGE_PATH%/*}"
 
-      # Use the output from the `coverage` step
+      # Use the output from the `environment` step
       - name: Generate the badge SVG image
         uses: emibcn/badge-action@v1
         id: badge
@@ -98,13 +98,13 @@ jobs:
           label: ${{ steps.deployment_status.outputs.label }}
           status: ${{ steps.deployment_status.outputs.status }}
           color: ${{ steps.deployment_status.outputs.color }}
-          path: ${{ steps.coverage.outputs.path }}
+          path: ${{ steps.environment.outputs.path }}
 
       # Commit and push badge SVG to the repository
       - name: Commit badge
         continue-on-error: true
         env:
-          BADGE: ${{ steps.coverage.outputs.path }}
+          BADGE: ${{ steps.environment.outputs.path }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -115,4 +115,4 @@ jobs:
         if: ${{ success() }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ steps.coverage.outputs.branch }}
+          branch: ${{ steps.environment.outputs.branch }}
